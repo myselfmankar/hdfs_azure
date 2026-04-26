@@ -60,18 +60,19 @@ for h in worker1 worker2; do
     hadoop@$h:$HCONF/
 done
 
-echo "[4/7] format NameNode (idempotent: skips if already formatted)"
+echo "[4/8] format NameNode (idempotent: skips if already formatted)"
+# stop any running HDFS first so format/start steps are clean
+sudo -u hadoop /opt/hadoop/sbin/stop-dfs.sh || true
 if [ ! -f /opt/hadoop/data/name/current/VERSION ]; then
   sudo -u hadoop /opt/hadoop/bin/hdfs namenode -format -nonInteractive -force
 fi
 
-echo "[5/7] start HDFS"
-sudo -u hadoop /opt/hadoop/sbin/stop-dfs.sh || true
+echo "[5/8] start HDFS"
 sudo -u hadoop /opt/hadoop/sbin/start-dfs.sh
 sleep 5
 sudo -u hadoop /opt/hadoop/bin/hdfs dfsadmin -report || true
 
-echo "[6/7] create /cloud/blocks in HDFS"
+echo "[6/8] create /cloud/blocks in HDFS"
 sudo -u hadoop /opt/hadoop/bin/hdfs dfs -mkdir -p /cloud/blocks
 sudo -u hadoop /opt/hadoop/bin/hdfs dfs -chmod 777 /cloud/blocks
 

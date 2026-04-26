@@ -91,9 +91,19 @@ async function doUpload(file) {
 }
 
 const dz = $("#dropzone");
-dz.addEventListener("click", () => $("#file").click());
-$("#pick").addEventListener("click", e => { e.preventDefault(); $("#file").click(); });
-$("#file").addEventListener("change", e => e.target.files[0] && doUpload(e.target.files[0]));
+dz.addEventListener("click", e => {
+  // ignore clicks that originated on inner elements (e.g. the "browse" link)
+  if (e.target === dz || e.target.tagName === "P") $("#file").click();
+});
+$("#pick").addEventListener("click", e => {
+  e.preventDefault();
+  e.stopPropagation();
+  $("#file").click();
+});
+$("#file").addEventListener("change", e => {
+  if (e.target.files[0]) doUpload(e.target.files[0]);
+  e.target.value = "";   // allow re-selecting the same file later
+});
 ["dragenter","dragover"].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.add("over"); }));
 ["dragleave","drop"].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.remove("over"); }));
 dz.addEventListener("drop", e => e.dataTransfer.files[0] && doUpload(e.dataTransfer.files[0]));
