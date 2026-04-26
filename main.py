@@ -41,11 +41,21 @@ def _load_or_create_key():
     return key
 
 # ─────────────────────────────────────────────────────────────────────────────
+def _ensure_venv():
+    venv_python = os.path.join(CTRL_DIR, ".venv", "bin", "python")
+    if not os.path.isfile(venv_python):
+        print("[venv] not found — creating now...")
+        run(f"python3 -m venv {os.path.join(CTRL_DIR, '.venv')}")
+        run(f"{os.path.join(CTRL_DIR, '.venv', 'bin', 'pip')} install --quiet --upgrade pip")
+        run(f"{os.path.join(CTRL_DIR, '.venv', 'bin', 'pip')} install --quiet -r {os.path.join(CTRL_DIR, 'requirements.txt')}")
+    return venv_python
+
 def cmd_start():
     key = _load_or_create_key()
 
     print("\n[1/2] start HDFS")
-    run(f"sudo -u hadoop {HADOOP}/sbin/start-dfs.sh")
+    # check=False: start-dfs.sh exits non-zero if daemons are already running, which is fine
+    run(f"sudo -u hadoop {HADOOP}/sbin/start-dfs.sh", check=False)
     time.sleep(3)
     run(f"sudo -u hadoop {HADOOP}/bin/hdfs dfsadmin -safemode leave", check=False)
 
@@ -54,7 +64,7 @@ def cmd_start():
     env = os.environ.copy()
     env["MASTER_KEY_B64"] = key
     env["WEBHDFS_URL"]    = env.get("WEBHDFS_URL", "http://master:9870/webhdfs/v1")
-    venv_python = os.path.join(CTRL_DIR, ".venv", "bin", "python")
+    venv_python = _ensure_venv()
     log = open(LOG_FILE, "a")
     proc = subprocess.Popen(
         [venv_python, "app.py"],
