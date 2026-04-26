@@ -98,6 +98,16 @@ input[type=text], input[type=number] {
 .bar .fill { background: var(--accent); height: 14px; border-radius: 2px; opacity: 0.7; }
 .bar .count { margin-left: 6px; color: var(--fg); }
 
+.loc-summary, .loc-blocks {
+  width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px;
+}
+.loc-summary td, .loc-blocks th, .loc-blocks td {
+  padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left;
+}
+.loc-summary td:first-child { color: var(--muted); width: 50%; }
+.loc-blocks th { color: var(--muted); font-weight: 500; background: rgba(255,255,255,0.02); }
+.loc-blocks code { font-size: 11px; color: var(--accent); }
+
 .badge {
   display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 10px;
   margin-left: 6px; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600;

@@ -177,6 +177,53 @@ def delete(file_id):
     return {"deleted": file_id}
 
 
+@app.route("/api/files/<file_id>/locations")
+def file_locations(file_id):
+    """Run `hdfs fsck` to discover which DataNodes hold each block."""
+    import subprocess, re
+    meta = _load_meta(file_id)
+    try:
+        out = subprocess.run(
+            ["sudo", "-u", "hadoop", "/opt/hadoop/bin/hdfs",
+             "fsck", meta["hdfs_dir"], "-files", "-blocks", "-locations"],
+            capture_output=True, text=True, timeout=20, check=True
+        ).stdout
+    except subprocess.CalledProcessError as e:
+        return jsonify({"error": e.stderr or str(e)}), 500
+
+    # Parse fsck output: lines of form
+    #   /path/block_000000.enc 39296 bytes, ...
+    #   0. BP-...:blk_xxx_yyy len=39296 ... [DatanodeInfoWithStorage[10.0.0.5:9866,...,DISK], ...]
+    blocks = []
+    current_file = None
+    dn_re = re.compile(r"DatanodeInfoWithStorage\[([^,]+),")
+    for raw in out.splitlines():
+        line = raw.strip()
+        m_path = re.match(r"^(/cloud/blocks/[^\s]+\.enc)\s+(\d+)\s+bytes", line)
+        if m_path:
+            current_file = m_path.group(1).split("/")[-1]
+            continue
+        m_blk = re.match(r"^\d+\.\s+(BP-\S+:blk_\d+_\d+)\s+len=(\d+).*", line)
+        if m_blk and current_file:
+            dns = dn_re.findall(raw)
+            blocks.append({
+                "block": current_file,
+                "blk_id": m_blk.group(1),
+                "size": int(m_blk.group(2)),
+                "datanodes": [d.split(":")[0] for d in dns],
+            })
+            current_file = None
+
+    summary = {}
+    for line in out.splitlines():
+        for k in ("Total size", "Total blocks", "Average block replication",
+                  "Replicated Blocks", "Number of data-nodes"):
+            if line.strip().startswith(k):
+                summary[k] = line.strip().split(":", 1)[-1].strip()
+
+    return jsonify({"hdfs_dir": meta["hdfs_dir"], "blocks": blocks, "summary": summary})
+
+
 # ---- word-count job ---------------------------------------------
 def _do_wordcount(meta, target_word, top_n, log):
     try:

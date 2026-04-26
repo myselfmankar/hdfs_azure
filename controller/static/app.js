@@ -38,6 +38,7 @@ async function refreshFiles() {
       <td>${it.blocks}</td>
       <td class="actions">
         <button data-act="dl"  data-id="${it.file_id}">download</button>
+        <button data-act="loc" data-id="${it.file_id}" data-name="${it.filename}">locations</button>
         <button data-act="wc"  data-id="${it.file_id}" data-name="${it.filename}">word count</button>
         <button data-act="del" data-id="${it.file_id}" class="danger">delete</button>
       </td>`;
@@ -61,7 +62,41 @@ filesEl.addEventListener("click", async e => {
     $("#wc-result").innerHTML = "";
     $("#wc-card").scrollIntoView({behavior:"smooth", block:"nearest"});
   }
+  if (b.dataset.act === "loc") {
+    await showLocations(id, b.dataset.name);
+  }
 });
+
+async function showLocations(fileId, name) {
+  const card = $("#loc-card");
+  card.hidden = false;
+  $("#loc-target-file").textContent = "· " + name;
+  $("#loc-body").innerHTML = `<em style="color:var(--muted)">querying NameNode via fsck…</em>`;
+  card.scrollIntoView({behavior:"smooth", block:"nearest"});
+
+  const r = await fetch(`/api/files/${fileId}/locations`);
+  if (!r.ok) {
+    $("#loc-body").innerHTML = `<span style="color:var(--red)">error: ${r.status}</span>`;
+    return;
+  }
+  const data = await r.json();
+  const sumRows = Object.entries(data.summary || {})
+    .map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join("");
+  const blkRows = (data.blocks || []).map((b, i) => `
+    <tr>
+      <td>${b.block}</td>
+      <td><code>${b.blk_id}</code></td>
+      <td>${human(b.size)}</td>
+      <td>${b.datanodes.map(dn => `<span class="badge">${dn}</span>`).join(" ")}</td>
+    </tr>`).join("");
+  $("#loc-body").innerHTML = `
+    <p style="color:var(--muted);font-size:12px">HDFS path: <code>${data.hdfs_dir}</code></p>
+    <table class="loc-summary"><tbody>${sumRows}</tbody></table>
+    <table class="loc-blocks">
+      <thead><tr><th>block file</th><th>HDFS block id</th><th>size</th><th>replicas (datanode IPs)</th></tr></thead>
+      <tbody>${blkRows}</tbody>
+    </table>`;
+}
 
 function streamJob(jobId, onResult) {
   $("#job-id").textContent = "job " + jobId.slice(0,8);
