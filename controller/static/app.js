@@ -78,16 +78,38 @@ function streamJob(jobId, onResult) {
     }
     logLine(d, classify(d.msg));
   };
-  es.onerror = () => { es.close(); logLine({ts:"--:--:--", msg:"(connection lost)"}, "err"); };
+  es.onerror = () => { es.close(); logLine({ts:"--:--:--", msg:"(connection lost)"}, "err"); onResult && onResult(null); };
 }
 
 // upload --------------------------------------------------------
+function addPendingRow(file) {
+  const tr = document.createElement("tr");
+  tr.className = "pending";
+  tr.dataset.pendingId = Math.random().toString(36).slice(2);
+  tr.innerHTML = `
+    <td>${file.name} <span class="badge processing">processing</span></td>
+    <td>${human(file.size)}</td>
+    <td><span class="spinner"></span></td>
+    <td class="actions"><em style="color:var(--muted)">uploading & encrypting…</em></td>`;
+  filesEl.prepend(tr);
+  return tr;
+}
+
 async function doUpload(file) {
-  const fd = new FormData();
-  fd.append("file", file);
-  const r = await fetch("/api/upload", { method: "POST", body: fd });
-  const { job_id } = await r.json();
-  streamJob(job_id);
+  const pendingRow = addPendingRow(file);
+  try {
+    const fd = new FormData();
+    fd.append("file", file);
+    const r = await fetch("/api/upload", { method: "POST", body: fd });
+    if (!r.ok) throw new Error("upload request failed: " + r.status);
+    const { job_id } = await r.json();
+    streamJob(job_id, () => pendingRow.remove());
+  } catch (e) {
+    pendingRow.querySelector(".badge").textContent = "failed";
+    pendingRow.querySelector(".badge").classList.add("error");
+    logLine({ts:"--:--:--", msg:"upload failed: " + e.message}, "err");
+  }
+}
 }
 
 const dz = $("#dropzone");
