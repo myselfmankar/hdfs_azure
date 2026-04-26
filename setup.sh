@@ -29,7 +29,12 @@ echo "  2) worker"
 read -rp "Choice [1/2]: " choice
 
 case "$choice" in
-  1) python3 main.py setup  ;;
+  1)
+    python3 main.py setup
+    echo
+    echo "[bootstrap] Setup done. Starting HDFS + Flask controller..."
+    python3 main.py start
+    ;;
   2) python3 main.py worker ;;
   *) echo "Invalid choice. Run 'python3 main.py setup' or 'python3 main.py worker' manually." ;;
 esac
