@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Controller runtime data
+controller/metadata/*.json
+
+# Secrets / keys
+*.pem
+*.key
+.env
