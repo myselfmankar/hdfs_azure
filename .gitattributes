@@ -1,0 +1,5 @@
+* text=auto
+
+# Force LF on all shell scripts regardless of OS
+*.sh text eol=lf
+run.sh text eol=lf

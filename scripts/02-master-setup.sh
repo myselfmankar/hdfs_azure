@@ -64,6 +64,11 @@ echo "[4/8] format NameNode (idempotent: skips if already formatted)"
 # stop any running HDFS first so format/start steps are clean
 sudo -u hadoop /opt/hadoop/sbin/stop-dfs.sh || true
 if [ ! -f /opt/hadoop/data/name/current/VERSION ]; then
+  # wipe worker datanode dirs first to avoid clusterID mismatch after re-format
+  for h in worker1 worker2; do
+    sudo -u hadoop ssh -o StrictHostKeyChecking=no hadoop@$h \
+      "rm -rf /opt/hadoop/data/data && mkdir -p /opt/hadoop/data/data" || true
+  done
   sudo -u hadoop /opt/hadoop/bin/hdfs namenode -format -nonInteractive -force
 fi
 
