@@ -11,3 +11,4 @@ controller/metadata/*.json
 *.pem
 *.key
 .env
+images/

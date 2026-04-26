@@ -75,17 +75,50 @@ echo "[6/7] create /cloud/blocks in HDFS"
 sudo -u hadoop /opt/hadoop/bin/hdfs dfs -mkdir -p /cloud/blocks
 sudo -u hadoop /opt/hadoop/bin/hdfs dfs -chmod 777 /cloud/blocks
 
-echo "[7/7] Python venv + controller deps"
+echo "[7/8] Python venv + controller deps"
 cd "$REPO_DIR/controller"
 python3 -m venv .venv
 .venv/bin/pip install --upgrade pip
 .venv/bin/pip install -r requirements.txt
 
+echo "[8/8] nginx reverse proxy on :80 -> :5000"
+sudo apt-get install -y nginx
+sudo tee /etc/nginx/sites-available/cloud-controller >/dev/null <<'NGINX'
+server {
+    listen 80 default_server;
+    server_name _;
+
+    client_max_body_size 1024m;          # allow large uploads
+    proxy_read_timeout   600;
+    proxy_send_timeout   600;
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # SSE / streaming
+        proxy_buffering          off;
+        proxy_request_buffering  off;
+        proxy_http_version       1.1;
+        proxy_set_header         Connection "";
+    }
+}
+NGINX
+sudo ln -sf /etc/nginx/sites-available/cloud-controller /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl restart nginx
+sudo systemctl enable nginx
+
 cat <<EOF
 
 ==========================================================
-HDFS up. NameNode UI: http://<master-public-ip>:9870
-To start the cloud controller:
+HDFS up.       NameNode UI : http://<master-public-ip>:9870
+nginx up.      App URL     : http://<master-public-ip>/        (port 80)
+
+To start the cloud controller (keep Flask bound to 127.0.0.1):
   cd $REPO_DIR/controller
   export MASTER_KEY_B64=\$(python3 -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())")
   echo "SAVE THIS KEY: \$MASTER_KEY_B64"
