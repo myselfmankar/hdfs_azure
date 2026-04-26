@@ -110,7 +110,6 @@ async function doUpload(file) {
     logLine({ts:"--:--:--", msg:"upload failed: " + e.message}, "err");
   }
 }
-}
 
 const dz = $("#dropzone");
 dz.addEventListener("click", e => {
