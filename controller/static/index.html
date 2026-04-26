@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cloud Mini · HDFS SaaS</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>Cloud Mini <span class="sub">SaaS over HDFS · AES-256-GCM at rest</span></h1>
+  <div class="status" id="cluster">cluster: <span id="cluster-status">…</span></div>
+</header>
+
+<main>
+  <section class="left">
+    <div class="card">
+      <h2>Upload</h2>
+      <div id="dropzone" class="drop">
+        <input type="file" id="file" hidden>
+        <p>Drop file here or <a href="#" id="pick">browse</a></p>
+        <p class="hint">Splits into 4 MB blocks · AES-256-GCM · replicated ×2 across DataNodes</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Files on cloud</h2>
+      <table id="files">
+        <thead><tr>
+          <th>filename</th><th>size</th><th>blocks</th><th>actions</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card" id="wc-card" hidden>
+      <h2>Word Count <small id="wc-target-file"></small></h2>
+      <label>target word (optional)
+        <input type="text" id="wc-word" placeholder="e.g. the">
+      </label>
+      <label>top N
+        <input type="number" id="wc-topn" value="20" min="5" max="100">
+      </label>
+      <button id="wc-run">Run MapReduce</button>
+      <div id="wc-result"></div>
+    </div>
+  </section>
+
+  <section class="right">
+    <div class="card log-card">
+      <h2>Job log <span class="job-id" id="job-id"></span></h2>
+      <pre id="log"></pre>
+    </div>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
