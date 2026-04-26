@@ -7,6 +7,7 @@ Phases:
 """
 import base64
 import collections
+import io
 import re
 import time
 
@@ -14,6 +15,20 @@ import crypto_utils
 import hdfs_client
 
 _TOKEN_RE = re.compile(r"[A-Za-z']+")
+
+
+def _extract_text(plaintext: bytes, filename: str) -> str:
+    """Decode bytes -> text. For PDF, extract text via pypdf.
+    For plain files, decode as UTF-8 (lossy)."""
+    name = filename.lower()
+    if name.endswith(".pdf") or plaintext[:4] == b"%PDF":
+        try:
+            from pypdf import PdfReader
+            reader = PdfReader(io.BytesIO(plaintext))
+            return "\n".join((p.extract_text() or "") for p in reader.pages)
+        except Exception as e:
+            return ""  # fall through to empty; logged by caller
+    return plaintext.decode("utf-8", errors="ignore")
 
 
 def run(meta: dict, target_word: str | None, top_n: int, log) -> dict:
@@ -37,7 +52,8 @@ def run(meta: dict, target_word: str | None, top_n: int, log) -> dict:
         pt = crypto_utils.decrypt(nonce, ct, aad)
 
         local: dict[str, int] = collections.Counter()
-        for tok in _TOKEN_RE.findall(pt.decode("utf-8", errors="ignore").lower()):
+        text = _extract_text(pt, meta["filename"]).lower()
+        for tok in _TOKEN_RE.findall(text):
             local[tok] += 1
         tokens = sum(local.values())
         total_tokens += tokens
